@@ -1,0 +1,118 @@
+Setting up SonarQube using Ansible with roles involves breaking down the tasks into modular roles for better organization and maintenance. Here's an example directory structure and corresponding Ansible playbook:
+
+1. **Directory Structure**:
+
+```
+sonarqube_ansible/
+├── roles/
+│   ├── java/
+│   │   └── tasks/
+│   │       └── main.yml
+│   ├── sonarqube/
+│   │   ├── defaults/
+│   │   │   └── main.yml
+│   │   └── tasks/
+│   │       └── main.yml
+└── playbook.yml
+```
+
+2. **Roles**:
+
+   - `java` role: Installs Java OpenJDK.
+   - `sonarqube` role: Installs and configures SonarQube.
+
+3. **Playbook** (`playbook.yml`):
+
+```yaml
+---
+- name: Install and configure SonarQube
+  hosts: your_target_servers
+  become: yes
+
+  roles:
+    - java
+    - sonarqube
+```
+
+4. **Role: java** (`roles/java/tasks/main.yml`):
+
+```yaml
+---
+- name: Install Java OpenJDK
+  package:
+    name: java-11-openjdk-devel
+    state: present
+```
+
+5. **Role: sonarqube** (`roles/sonarqube/tasks/main.yml`):
+
+```yaml
+---
+- name: Create sonarqube user
+  user:
+    name: sonarqube
+    state: present
+
+- name: Download SonarQube
+  get_url:
+    url: "https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-8.9.2.46101.zip"
+    dest: "/home/sonarqube/sonarqube.zip"
+
+- name: Extract SonarQube
+  unarchive:
+    src: "/home/sonarqube/sonarqube.zip"
+    dest: "/opt/"
+    remote_src: yes
+    owner: sonarqube
+    group: sonarqube
+    mode: "0755"
+
+- name: Rename sonarqube directory
+  command: mv /opt/sonarqube-* /opt/sonarqube
+  args:
+    creates: /opt/sonarqube
+
+- name: Set sonarqube user as owner
+  file:
+    path: /opt/sonarqube
+    owner: sonarqube
+    group: sonarqube
+    recurse: yes
+
+- name: Add sonarqube as a systemd service
+  copy:
+    src: "{{ playbook_dir }}/roles/sonarqube/files/sonarqube.service"
+    dest: /etc/systemd/system/sonarqube.service
+
+- name: Start SonarQube service
+  systemd:
+    name: sonarqube
+    state: started
+    enabled: yes
+```
+
+6. **SonarQube Service File** (`roles/sonarqube/files/sonarqube.service`):
+
+```ini
+[Unit]
+Description=SonarQube service
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/opt/sonarqube/bin/linux-x86-64/sonar.sh start
+ExecStop=/opt/sonarqube/bin/linux-x86-64/sonar.sh stop
+User=sonarqube
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target
+```
+
+To run the playbook, navigate to the directory containing your `playbook.yml` file and execute the following command:
+
+```bash
+ansible-playbook -i your_inventory_file playbook.yml
+```
+
+Replace `your_target_servers` with the host or group of hosts where you want to install SonarQube, and `your_inventory_file` with the path to your Ansible inventory file. Make sure that your Ansible control machine has SSH access to the target servers.

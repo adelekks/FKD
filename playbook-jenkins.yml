@@ -1,0 +1,87 @@
+To install and configure Jenkins using Ansible with roles on RHEL 8, you can organize your playbook into roles for better maintainability and modularity. Below is an example directory structure and corresponding Ansible playbook:
+
+1. **Directory Structure**:
+
+```
+jenkins_ansible/
+├── roles/
+│   ├── java/
+│   │   └── tasks/
+│   │       └── main.yml
+│   └── jenkins/
+│       ├── defaults/
+│       │   └── main.yml
+│       └── tasks/
+│           └── main.yml
+└── playbook.yml
+```
+
+2. **Roles**:
+
+   - `java` role: Installs Java OpenJDK.
+   - `jenkins` role: Installs and configures Jenkins.
+
+3. **Playbook** (`playbook.yml`):
+
+```yaml
+---
+- name: Install and configure Jenkins
+  hosts: your_target_servers
+  become: yes
+
+  roles:
+    - java
+    - jenkins
+```
+
+4. **Role: java** (`roles/java/tasks/main.yml`):
+
+```yaml
+---
+- name: Install Java OpenJDK
+  package:
+    name: java-11-openjdk-devel
+    state: present
+```
+
+5. **Role: jenkins** (`roles/jenkins/tasks/main.yml`):
+
+```yaml
+---
+- name: Add Jenkins repository key
+  rpm_key:
+    key: "https://pkg.jenkins.io/redhat-stable/jenkins.io.key"
+
+- name: Add Jenkins repository
+  yum_repository:
+    name: "jenkins"
+    description: "Jenkins Official Repository"
+    baseurl: "https://pkg.jenkins.io/redhat-stable/"
+    gpgcheck: yes
+    enabled: yes
+
+- name: Install Jenkins
+  yum:
+    name: jenkins
+    state: present
+
+- name: Start Jenkins service
+  service:
+    name: jenkins
+    state: started
+    enabled: yes
+
+- name: Allow Jenkins default port (8080) through firewall
+  firewalld:
+    service: http
+    state: enabled
+    immediate: yes
+```
+
+To run the playbook, navigate to the directory containing your `playbook.yml` file and execute the following command:
+
+```bash
+ansible-playbook -i your_inventory_file playbook.yml
+```
+
+Replace `your_target_servers` with the host or group of hosts where you want to install Jenkins, and `your_inventory_file` with the path to your Ansible inventory file. Make sure that your Ansible control machine has SSH access to the target servers.

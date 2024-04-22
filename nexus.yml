@@ -1,0 +1,119 @@
+Setting up Nexus using Ansible with roles involves breaking down the tasks into modular roles for better organization and maintenance. Here's an example directory structure and corresponding Ansible playbook:
+
+1. **Directory Structure**:
+
+```
+nexus_ansible/
+├── roles/
+│   ├── java/
+│   │   └── tasks/
+│   │       └── main.yml
+│   └── nexus/
+│       ├── defaults/
+│       │   └── main.yml
+│       └── tasks/
+│           └── main.yml
+└── playbook.yml
+```
+
+2. **Roles**:
+
+   - `java` role: Installs Java OpenJDK.
+   - `nexus` role: Installs and configures Nexus Repository Manager.
+
+3. **Playbook** (`playbook.yml`):
+
+```yaml
+---
+- name: Install and configure Nexus
+  hosts: your_target_servers
+  become: yes
+
+  roles:
+    - java
+    - nexus
+```
+
+4. **Role: java** (`roles/java/tasks/main.yml`):
+
+```yaml
+---
+- name: Install Java OpenJDK
+  package:
+    name: java-11-openjdk-devel
+    state: present
+```
+
+5. **Role: nexus** (`roles/nexus/tasks/main.yml`):
+
+```yaml
+---
+- name: Create nexus user
+  user:
+    name: nexus
+    state: present
+
+- name: Download Nexus
+  get_url:
+    url: "https://download.sonatype.com/nexus/3/latest-unix.tar.gz"
+    dest: "/home/nexus/nexus.tar.gz"
+
+- name: Extract Nexus
+  unarchive:
+    src: "/home/nexus/nexus.tar.gz"
+    dest: "/opt/"
+    remote_src: yes
+    owner: nexus
+    group: nexus
+    mode: "0755"
+
+- name: Rename nexus directory
+  command: mv /opt/nexus-* /opt/nexus
+  args:
+    creates: /opt/nexus
+
+- name: Set nexus user as owner
+  file:
+    path: /opt/nexus
+    owner: nexus
+    group: nexus
+    recurse: yes
+
+- name: Add nexus as a systemd service
+  copy:
+    src: "{{ playbook_dir }}/roles/nexus/files/nexus.service"
+    dest: /etc/systemd/system/nexus.service
+
+- name: Start Nexus service
+  systemd:
+    name: nexus
+    state: started
+    enabled: yes
+```
+
+6. **Nexus Service File** (`roles/nexus/files/nexus.service`):
+
+```ini
+[Unit]
+Description=nexus service
+After=network.target
+
+[Service]
+Type=forking
+LimitNOFILE=65536
+ExecStart=/opt/nexus/bin/nexus start
+ExecStop=/opt/nexus/bin/nexus stop
+User=nexus
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target
+```
+
+To run the playbook, navigate to the directory containing your `playbook.yml` file and execute the following command:
+
+```bash
+ansible-playbook -i your_inventory_file playbook.yml
+```
+
+Replace `your_target_servers` with the host or group of hosts where you want to install Nexus, and `your_inventory_file` with the path to your Ansible inventory file. Make sure that your Ansible control machine has SSH access to the target servers.

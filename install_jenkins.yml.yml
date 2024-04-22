@@ -1,0 +1,39 @@
+---
+- name: Install and configure Jenkins on RHEL 8
+  hosts: your_server
+  become: yes
+
+  tasks:
+    - name: Add Jenkins repository key
+      rpm_key:
+        key: "https://pkg.jenkins.io/redhat-stable/jenkins.io.key"
+
+    - name: Add Jenkins repository
+      yum_repository:
+        name: "jenkins"
+        description: "Jenkins Official Repository"
+        baseurl: "https://pkg.jenkins.io/redhat-stable/"
+        gpgcheck: yes
+        enabled: yes
+
+    - name: Install Java OpenJDK
+      yum:
+        name: java-11-openjdk-devel
+        state: present
+
+    - name: Install Jenkins
+      yum:
+        name: jenkins
+        state: present
+
+    - name: Start Jenkins service
+      service:
+        name: jenkins
+        state: started
+        enabled: yes
+
+    - name: Allow Jenkins default port (8080) through firewall
+      firewalld:
+        service: http
+        state: enabled
+        immediate: yes

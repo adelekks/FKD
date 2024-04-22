@@ -1,0 +1,37 @@
+---
+- name: Setup Bitbucket Server
+  hosts: your_target_server
+  become: yes
+
+  tasks:
+    - name: Install Java OpenJDK
+      yum:
+        name: java-11-openjdk-devel
+        state: present
+
+    - name: Add Bitbucket repository
+      yum_repository:
+        name: "atlassian-bitbucket"
+        description: "Atlassian Bitbucket"
+        baseurl: "https://packages.atlassian.com/rpm/atlassian-$releasever-x86_64/"
+        gpgcheck: yes
+        gpgkey: "https://packages.atlassian.com/api/gpg/key/public"
+        enabled: yes
+
+    - name: Install Bitbucket
+      yum:
+        name: atlassian-bitbucket
+        state: present
+
+    - name: Start Bitbucket service
+      service:
+        name: atlbitbucket
+        state: started
+        enabled: yes
+
+    - name: Open firewall port for Bitbucket (default port is 7990)
+      firewalld:
+        service: http
+        port: 7990
+        state: enabled
+        permanent: yes
