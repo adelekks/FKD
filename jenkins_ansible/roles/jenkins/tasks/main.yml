@@ -34,9 +34,15 @@
     state: started
     enabled: yes
 
+#- name: Allow SSH traffic
+ # firewalld:
+ #   service: ssh
+ #   permanent: yes
+ #   state: enabled
+ 
 - name: Allow SSH traffic
   firewalld:
-    service: ssh
+    port: 22/tcp
     permanent: yes
     state: enabled
     
