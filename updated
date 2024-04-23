@@ -1,0 +1,38 @@
+---
+- name: Provision Ansible server on AWS
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Launch EC2 instance for Ansible server
+      ec2:
+        key_name: your_key_pair_name
+        instance_type: t2.micro
+        image: ami-xxxxxxxxxxxxxxxxx # Use the appropriate AMI for your region and preference
+        region: your_aws_region
+        vpc_subnet_id: your_subnet_id
+        group: your_security_group
+        count: 1
+        instance_tags:
+          Name: AnsibleServer
+      register: ec2_instance
+
+    - name: Add instance to host group
+      add_host:
+        hostname: "{{ item.public_ip }}"
+        groupname: ansible_server
+      with_items: "{{ ec2_instance.instances }}"
+
+- name: Configure Ansible server
+  hosts: ansible_server
+  become: yes
+  tasks:
+    - name: Install Ansible
+      package:
+        name: ansible
+        state: present
+
+    - name: Add Ansible role to configuration
+      lineinfile:
+        dest: /etc/ansible/ansible.cfg
+        line: 'roles_path    = /path/to/your/ansible/roles' # Replace with the path to your roles directory
+        insertafter: '^#roles_path'

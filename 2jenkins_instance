@@ -1,0 +1,59 @@
+---
+- name: Provision Jenkins instances on AWS
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Launch EC2 instances
+      ec2:
+        key_name: your_key_pair_name
+        instance_type: t2.micro
+        image: ami-xxxxxxxxxxxxxxxxx # Use the appropriate AMI for your region and preference
+        region: your_aws_region
+        vpc_subnet_id: your_subnet_id
+        group: your_security_group
+        count: 2
+        instance_tags:
+          Name: JenkinsInstance
+      register: ec2_instances
+
+    - name: Add instances to host group
+      add_host:
+        hostname: "{{ item.public_ip }}"
+        groupname: jenkins_instances
+      with_items: "{{ ec2_instances.instances }}"
+
+- name: Configure Jenkins instances
+  hosts: jenkins_instances
+  become: yes
+  tasks:
+    - name: Install Java
+      package:
+        name: openjdk-8-jdk
+        state: present
+
+    - name: Install Jenkins
+      apt:
+        name: jenkins
+        state: present
+
+    - name: Generate self-signed SSL certificate
+      command: |
+        openssl req -new -newkey rsa:2048 -days 365 -nodes -x509 \
+          -subj "/C=US/ST=YourState/L=YourCity/O=YourOrganization/CN=jenkins.example.com" \
+          -keyout /etc/ssl/private/jenkins.key \
+          -out /etc/ssl/certs/jenkins.crt
+      args:
+        creates: /etc/ssl/certs/jenkins.crt
+
+    - name: Configure Jenkins to use SSL
+      lineinfile:
+        dest: /etc/default/jenkins
+        regexp: '^JENKINS_ARGS='
+        line: 'JENKINS_ARGS="--httpPort=-1 --httpsPort=443 --httpsKeyStore=/etc/ssl/certs/jenkins.crt --httpsKeyStorePassword=changeit"'
+      notify: Restart Jenkins
+
+  handlers:
+    - name: Restart Jenkins
+      service:
+        name: jenkins
+        state: restarted
