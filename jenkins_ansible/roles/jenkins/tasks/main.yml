@@ -33,6 +33,14 @@
     name: firewalld
     state: started
     enabled: yes
+    
+- name: Open port 8080/tcp in firewalld
+  firewalld:
+     port: 8080/tcp
+      state: enabled
+      permanent: yes
+  notify:
+      - Reload firewalld
 
 - name: Install Jenkins
   yum:
