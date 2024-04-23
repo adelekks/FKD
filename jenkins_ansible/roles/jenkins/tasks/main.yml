@@ -33,6 +33,12 @@
     name: firewalld
     state: started
     enabled: yes
+
+- name: Allow SSH traffic
+  firewalld:
+    service: ssh
+    permanent: yes
+    state: enabled
     
 - name: Open port 8080/tcp in firewalld
   firewalld:
