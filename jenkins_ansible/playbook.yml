@@ -1,0 +1,8 @@
+---
+- name: Install and configure Jenkins
+  hosts: localhost
+  become: yes
+
+  roles:
+    - java
+    - jenkins

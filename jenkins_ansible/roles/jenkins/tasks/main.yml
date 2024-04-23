@@ -1,0 +1,52 @@
+---
+# tasks file for jenkins
+#- name: Add Jenkins repository key
+#  rpm_key:
+#    key: "https://pkg.jenkins.io/redhat-stable/jenkins.io.key"
+
+- name: Add Jenkins repository
+  yum_repository:
+    name: "jenkins"
+    description: "Jenkins Official Repository"
+    baseurl: "https://pkg.jenkins.io/redhat-stable/"
+    gpgcheck: no
+    enabled: yes
+
+- name: Install Python
+  yum:
+    name: python
+    state: present
+
+
+- name: Install Python3-pip Package
+  yum:
+    name: python3-pip
+    state: present
+
+- name: Install firewalld Python package
+  yum:
+    name: firewalld
+    state: present
+
+- name: Start Firewalld service
+  service:
+    name: firewalld
+    state: started
+    enabled: yes
+
+- name: Install Jenkins
+  yum:
+    name: jenkins
+    state: present
+
+- name: Start Jenkins service
+  service:
+    name: jenkins
+    state: started
+    enabled: yes
+
+- name: Allow Jenkins default port (8080) through firewall
+  firewalld:
+    service: http
+    state: enabled
+    immediate: yes
